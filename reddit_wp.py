@@ -1,5 +1,5 @@
-import os
 import requests
+import os
 import random
 import json
 import time
@@ -67,6 +67,7 @@ def get_images(subreddit):
 def set_wallpaper(file):
     if os.name == 'nt':
         # https://stackoverflow.com/a/38053141
+        # Way to check if windows is 64 or 32-bit
         if 'PROGRAMFILES(X86)' in os.environ: # 64-bit Windows
             sys_paramaters_info = ctypes.windll.user32.SystemParametersInfoW
         else: # 32-bit Windows
@@ -76,8 +77,8 @@ def set_wallpaper(file):
         resp = sys_paramaters_info(20, 0, os.path.abspath(file), 3)
         if not resp:
             raise ctypes.WinError('Failed to set wallpaper.')
-    else:
-        os.system('feh something or other')
+    elif os.name == 'posix':
+        os.system(f'feh --bg-fill {os.path.abspath(file)}')
 
 def get_config(config_file = 'config.json'):
     try:
@@ -95,14 +96,31 @@ def get_config(config_file = 'config.json'):
     if config['resolution'] == 'system':
         config['resolution'] = get_resolution()
 
+    if os.name == 'posix':
+        config['download_folder'] = os.path.expanduser(config['download_folder'])
+        config['backup_image'] = os.path.expanduser(config['backup_image'])
+
     return config
 
 def get_resolution():
     if os.name == 'nt':
         width = ctypes.windll.user32.GetSystemMetrics(0)
         height = ctypes.windll.user32.GetSystemMetrics(1)
-    else:
-        os.system('xrandr something or other')
+    elif os.name == 'posix':
+        # https://stackoverflow.com/a/3598320
+        # Using xrandr, grab resolution of each monitor
+        resp = os.popen('xrandr | grep "\*" | cut -d" " -f4').read()
+        width = height = 0
+        for m in resp.split('\n'):
+            if m == '':
+                continue
+            w, h = m.split('x')
+            w = int(width)
+            h = int(height)
+            if w > width:
+                width = w
+            if h > height:
+                height = h
 
     return {'width': width, 'height': height}
 
@@ -154,6 +172,12 @@ def main():
             log_message(f'No images retrieved, defaulting to backup.')
             if config['backup_image']:
                 path = config['backup_image']
+                if os.name == 'nt':
+                    if not (len(path) >= 2 and re.match(r'[A-Z]:', path[:2])):
+                        path = f"{config['download_folder']}/{path}"
+                elif os.name == 'posix':
+                    if path[0] != '/':
+                        path = f"{config['download_folder']}/{path}"
             else:
                 log_message(f'No backup image set. Exiting.')
                 raise SystemExit
