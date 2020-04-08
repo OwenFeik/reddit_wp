@@ -14,8 +14,9 @@ class Image():
             self.width = post_json['preview']['images'][0]['source']['width']
             self.height = post_json['preview']['images'][0]['source']['height']
             self.id = post_json['id']
+            self.score = post_json['score']
         except:
-            raise ValueError
+            raise ValueError('Unable to extract necessary information from post.')
 
 class ImageNotFoundError(Exception):
     pass
@@ -46,7 +47,7 @@ def download_image(image, download_folder = 'images'):
 
     return path
 
-def get_images(subreddit = 'earthporn'):
+def get_images(subreddit):
     resp = requests.get(f'https://reddit.com/r/{subreddit}.json', 
         headers = {'user-agent': 'bot'})
     if not resp.status_code == 200:
@@ -83,9 +84,11 @@ def get_config(config_file = 'config.json'):
         config = json.load(open(config_file, 'r'))
     except FileNotFoundError:
         config = {
-            'subreddit': 'earthporn',
+            'subreddits': ['earthporn'],
             'resolution': 'system',
-            'download_folder': 'images'
+            'download_folder': 'images',
+            'selection': 'random',
+            'backup_image': ''
         }
         json.dump(config, open(config_file, 'w'), indent = 4)
 
@@ -123,25 +126,50 @@ def get_file_extension(url):
     else:
         raise ValueError('No file extension in supplied url.')
 
+def choose_image(images, rule):
+    if rule == 'random':
+        return random.choice(images)
+    elif rule == 'top':
+        return max(images, key = lambda i: i.score)
+    elif rule == 'score':
+        scores = [i.score for i in images]
+        return random.choices(images, weights = scores, k = 1)[0]
+
 def main():
     try:
         log_message('App started.')
+
         config = get_config()
         log_message('Loaded config.')
-        images = get_images(config['subreddit'])
-        log_message(f"Downloaded post list from /r/{config['subreddit']}.")
+        
+        images = []
+        for subreddit in config['subreddits']:
+            try:
+                images.extend(get_images(subreddit))
+            except Exception as e:
+                log_message(f'Failed to retrieve post list from /r/{subreddit}: ({e})')
         images = filter_images(config['resolution'], images)
-        image = random.choice(images)
-        try:
-            path = download_image(image, config['download_folder'])
-        except Exception as e:
-            log_message(f'Failed to download {image.url} ({e}). Trying another image.')
-            images.remove(image)
-            image = random.choice(images)
-            path = download_image(image, config['download_folder'])
-        log_message(f'Downloaded image ({image.url}).')
+        
+        if not images:
+            log_message(f'No images retrieved, defaulting to backup.')
+            if config['backup_image']:
+                path = config['backup_image']
+            else:
+                log_message(f'No backup image set. Exiting.')
+                raise SystemExit
+        else:
+            image = choose_image(images, config['selection'])
+            try:
+                path = download_image(image, config['download_folder'])
+            except Exception as e:
+                log_message(f'Failed to download {image.url} ({e}). Trying another image.')
+                images.remove(image)
+                image = choose_image(images, config['selection'])
+                path = download_image(image, config['download_folder'])
+            log_message(f'Downloaded image ({image.url}).')
+        
         set_wallpaper(path)
-        log_message(f'Set wallpaper to {path}.')
+        log_message(f'Set wallpaper to {os.path.abspath(path)}.')
     except Exception as e:
         log_message(f'Ran into a problem: {e}')
 
