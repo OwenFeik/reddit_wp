@@ -155,6 +155,8 @@ def choose_image(images, rule):
 
 def main():
     try:
+        scriptpath = os.path.abspath(__file__)
+        os.chdir(os.path.dirname(scriptpath))
         log_message('App started.')
 
         config = get_config()
