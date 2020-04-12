@@ -47,11 +47,10 @@ def download_image(image, download_folder = 'images'):
 
     return path
 
-def get_images(subreddit):
-    resp = requests.get(f'https://reddit.com/r/{subreddit}.json', 
-        headers = {'user-agent': 'bot'})
+def get_images(url):
+    resp = requests.get(url, headers = {'user-agent': 'bot'})
     if not resp.status_code == 200:
-        raise SubredditAccessError(f'Couldn\'t reach /r/{subreddit}')
+        raise SubredditAccessError(f'Couldn\'t reach {url}')
 
     data = [i['data'] for i in resp.json()['data']['children']]
     images = []
@@ -63,6 +62,15 @@ def get_images(subreddit):
                 pass
     
     return images
+
+def get_url(subreddit_string):
+    view = re.search('/(day|week|month|year|all)$', subreddit_string) 
+    if view:
+        view = view.group(0)
+        subreddit = subreddit_string.replace(view, '')
+        return f'https://reddit.com/r/{subreddit}/top.json?t={view[1:]}'
+    else:
+        return f'https://reddit.com/r/{subreddit_string}.json'
 
 def set_wallpaper(file):
     if os.name == 'nt':
@@ -85,7 +93,7 @@ def get_config(config_file = 'config.json'):
         config = json.load(open(config_file, 'r'))
     except FileNotFoundError:
         config = {
-            'subreddits': ['earthporn'],
+            'subreddits': ['earthporn/all'],
             'resolution': 'system',
             'download_folder': 'images',
             'selection': 'random',
@@ -109,7 +117,8 @@ def get_resolution():
     elif os.name == 'posix':
         # https://stackoverflow.com/a/3598320
         # Using xrandr, grab resolution of each monitor
-        resp = os.popen('xrandr | grep "\*" | cut -d" " -f4').read()
+        resp = os.popen('xrandr | grep "\\*" | cut -d" " -f4').read()
+        # Use largest monitor for minumum w/h
         width = height = 0
         for m in resp.split('\n'):
             if m == '':
@@ -165,7 +174,7 @@ def main():
         images = []
         for subreddit in config['subreddits']:
             try:
-                images.extend(get_images(subreddit))
+                images.extend(get_images(get_url(subreddit)))
             except Exception as e:
                 log_message(f'Failed to retrieve post list from /r/{subreddit}: ({e})')
         images = filter_images(config['resolution'], images)

@@ -18,7 +18,15 @@ A configuration file will be created when the script is first run, looking like 
 ```
 
 To customise the script, you can edit these fields:
-* ```subreddits``` contains a list of subreddits to pull images from.
+* ```subreddits``` contains a list of subreddits to pull images from. These can just be a subreddit name, in which case images will be pulled from hot, or they can be of the form ```"subname/<view>"``` where ```<view>``` is one of:
+    - ```new```
+    - ```rising```
+    - ```controversial```
+    - ```day```
+    - ```week```
+    - ```month```
+    - ```year```
+    - ```all```
 * ```resolution``` defines the minimum image resolution; by default, when set to ```"system"```, this will be determined automatically based on screen resolution. Otherwise, a dictionary must be provided, of the form
 ```json
 {
@@ -38,3 +46,8 @@ type = custom/script
 exec = echo "⏬"
 click-left = "python ~/path/to/reddit_wp.py &"
 ```
+
+If you plan on using the script on windows, the included file ```reddit_wp.vbs``` may be useful. It should run the script for you, and can be easily run at startup through the following method:
+* press ```Super + R``` to open the Run dialog.
+* enter ```shell:startup``` and press OK.
+* create a shortcut to ```reddit_wp.vbs``` in the startup folder.
