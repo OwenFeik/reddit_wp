@@ -64,11 +64,25 @@ def get_images(url):
     return images
 
 def get_url(subreddit_string):
-    view = re.search('/(day|week|month|year|all)$', subreddit_string) 
+    view = re.search(r'(?<=/)(day|week|month|year|all)(?=:|$)', subreddit_string)
+    quantity = re.search(r'(?<=:)\d+$', subreddit_string)
+    
+    queries = {}
     if view:
         view = view.group(0)
-        subreddit = subreddit_string.replace(view, '')
-        return f'https://reddit.com/r/{subreddit}/top.json?t={view[1:]}'
+        subreddit_string = subreddit_string.replace(f'/{view}', '/top')
+        queries['t'] = view
+    if quantity:
+        quantity = quantity.group(0)
+        subreddit_string = subreddit_string.replace(f':{quantity}', '')
+        queries['limit'] = str(min(int(quantity), 100))
+
+    if queries:
+        query_string = '?'
+        for q in queries:
+            query_string += f'{q}={queries[q]}&'
+        query_string = query_string[:-1] # Cut off trailing ampersand
+        return f'https://reddit.com/r/{subreddit_string}.json{query_string}'
     else:
         return f'https://reddit.com/r/{subreddit_string}.json'
 
@@ -124,8 +138,8 @@ def get_resolution():
             if m == '':
                 continue
             w, h = m.split('x')
-            w = int(width)
-            h = int(height)
+            w = int(w)
+            h = int(h)
             if w > width:
                 width = w
             if h > height:
@@ -161,7 +175,10 @@ def choose_image(images, rule):
     elif rule == 'score':
         scores = [i.score for i in images]
         return random.choices(images, weights = scores, k = 1)[0]
-
+    elif rule == 'rough':
+        scores = [i.score ** 0.5 for i in images]
+        return random.choices(images, weights = scores, k = 1)[0]
+        
 def main():
     try:
         scriptpath = os.path.abspath(__file__)

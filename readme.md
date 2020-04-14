@@ -18,7 +18,7 @@ A configuration file will be created when the script is first run, looking like 
 ```
 
 To customise the script, you can edit these fields:
-* ```subreddits``` contains a list of subreddits to pull images from. These can just be a subreddit name, in which case images will be pulled from hot, or they can be of the form ```"subname/<view>"``` where ```<view>``` is one of:
+* ```subreddits``` contains a list of subreddits to pull images from. These can just be a subreddit name, in which case images will be pulled from hot, or they can be of the form ```"subname/<view>:<quantity>"``` where ```<quantity>``` is a number of posts to retrieve less than or equal to 100 (numbers greater than 100 will be defaulted to 100) and ```<view>``` is one of:
     - ```new```
     - ```rising```
     - ```controversial```
@@ -35,7 +35,7 @@ To customise the script, you can edit these fields:
 }
 ```
 * ```download_folder``` is the folder downloaded images are saved to. By default, this is a folder called "images" in the installation folder.
-* ```selection``` determines how the image is chosen; by default, the front page of each subreddit is joined and a random image is chosen from this. Two other modes can also be used: ```"top"``` will use the image with the highest score and ```"score"``` will select randomly weighted by score.
+* ```selection``` determines how the image is chosen; by default, the front page of each subreddit is joined and a random image is chosen from this. Three other modes can also be used: ```"top"``` will use the image with the highest score, ```"score"``` will select randomly weighted by score and ```"rough"``` will select randomly with weights of sqrt(score).
 * ```backup_image``` is the image used if no image of sufficient resolution is found. It can either be an absolute path (```"C:\path\to\image```, ```"~/path/to/image"```, etc) or a path relative to the download folder (```"image"```, ```"../image"```, etc).
 
 If you plan on using the script with a polybar setup, the following module may be of use:
